@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { Header } from '@/components/layout/Header'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { FiltersSidebar } from '@/components/products/FiltersSidebar'
+import { Pagination } from '@/components/products/Pagination'
 import { StateMessage } from '@/components/common/StateMessage'
-import { Button } from '@/components/ui/button'
 import { useProducts } from '@/hooks/use-products'
 import { useCategories } from '@/hooks/use-categories'
 import { useFilterParams } from '@/hooks/use-filter-params'
@@ -93,26 +93,12 @@ export function ProductListingPage() {
                 listingSearch={location.search}
               />
 
-              <div className="mt-6 flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  ← Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next →
-                </Button>
+              <div className="mt-6">
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
+                />
               </div>
             </>
           )}
