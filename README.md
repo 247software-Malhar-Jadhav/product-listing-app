@@ -8,6 +8,35 @@ It has two screens:
 - **Product Listing Page** (`/`) — filterable, paginated product grid with a filters sidebar.
 - **Product Detail Page** (`/product/:id`) — full details, reviews and a filter-preserving Back button.
 
+## Screenshots
+
+### Product Listing Page
+
+![Product listing page](docs/screenshots/listing.png)
+
+The default view: all **194 products** in a responsive card grid (image, title, price,
+star rating). The left sidebar holds the filters — Categories (fetched from the API),
+Price Range, and Brands. Numbered pagination with Previous/Next sits at the bottom and
+collapses to an ellipsis (`1 2 3 4 5 6 … 25`) when there are many pages.
+
+### Filters in action — multi-select categories
+
+![Filters applied: Smartphones + Laptops](docs/screenshots/filters.png)
+
+Here **Smartphones + Laptops** are both selected, so the grid shows the merged set
+(**21 products**) and the product count updates. The Brands list automatically narrows to
+only the brands present in the current selection. All filters combine, update the list
+immediately, and reset pagination to page 1. Filter state lives in the URL
+(`/?categories=smartphones,laptops`), so the view is shareable and survives navigation.
+
+### Product Detail Page
+
+![Product detail page](docs/screenshots/detail.png)
+
+Opened by clicking any card (`/product/:id`). Shows the product image, title, price,
+rating, brand, category badge, full description, and customer reviews. The **Back** button
+returns to the listing with the previously selected filters still applied.
+
 ## Tech Stack
 
 | Concern        | Choice                                   |
