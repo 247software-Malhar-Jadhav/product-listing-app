@@ -14,7 +14,7 @@ interface FiltersSidebarProps {
   categoriesLoading: boolean
   brands: string[]
   filters: Filters
-  onCategoryChange: (slug: string | null) => void
+  onCategoryToggle: (slug: string) => void
   onPriceChange: (min: number | null, max: number | null) => void
   onBrandToggle: (brand: string) => void
   onReset: () => void
@@ -26,7 +26,7 @@ export function FiltersSidebar({
   categoriesLoading,
   brands,
   filters,
-  onCategoryChange,
+  onCategoryToggle,
   onPriceChange,
   onBrandToggle,
   onReset,
@@ -85,10 +85,8 @@ export function FiltersSidebar({
                 className="flex cursor-pointer items-center gap-2 text-sm"
               >
                 <Checkbox
-                  checked={filters.category === c.slug}
-                  onCheckedChange={(checked) =>
-                    onCategoryChange(checked ? c.slug : null)
-                  }
+                  checked={filters.categories.includes(c.slug)}
+                  onCheckedChange={() => onCategoryToggle(c.slug)}
                 />
                 {c.name}
               </label>

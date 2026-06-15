@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 export interface Filters {
-  category: string | null
+  categories: string[]
   minPrice: number | null
   maxPrice: number | null
   brands: string[]
@@ -27,8 +27,9 @@ export function useFilterParams() {
 
   const filters = useMemo<Filters>(() => {
     const brands = searchParams.get('brands')
+    const categories = searchParams.get('categories')
     return {
-      category: searchParams.get('category'),
+      categories: categories ? categories.split(',').filter(Boolean) : [],
       minPrice: parseNumber(searchParams.get('minPrice')),
       maxPrice: parseNumber(searchParams.get('maxPrice')),
       brands: brands ? brands.split(',').filter(Boolean) : [],
@@ -48,7 +49,8 @@ export function useFilterParams() {
             else next.set(key, value)
           }
 
-          if ('category' in patch) apply('category', patch.category ?? null)
+          if ('categories' in patch)
+            apply('categories', patch.categories?.length ? patch.categories.join(',') : null)
           if ('q' in patch) apply('q', patch.q ?? null)
           if ('minPrice' in patch)
             apply('minPrice', patch.minPrice != null ? String(patch.minPrice) : null)
@@ -67,9 +69,18 @@ export function useFilterParams() {
     [setSearchParams],
   )
 
-  const setCategory = useCallback(
-    (category: string | null) => update({ category }),
+  const setCategories = useCallback(
+    (categories: string[]) => update({ categories }),
     [update],
+  )
+  const toggleCategory = useCallback(
+    (slug: string) => {
+      const next = filters.categories.includes(slug)
+        ? filters.categories.filter((c) => c !== slug)
+        : [...filters.categories, slug]
+      update({ categories: next })
+    },
+    [filters.categories, update],
   )
   const setPrice = useCallback(
     (minPrice: number | null, maxPrice: number | null) =>
@@ -96,7 +107,7 @@ export function useFilterParams() {
   ])
 
   const hasActiveFilters =
-    Boolean(filters.category) ||
+    filters.categories.length > 0 ||
     filters.minPrice != null ||
     filters.maxPrice != null ||
     filters.brands.length > 0 ||
@@ -104,7 +115,8 @@ export function useFilterParams() {
 
   return {
     filters,
-    setCategory,
+    setCategories,
+    toggleCategory,
     setPrice,
     setSearch,
     setBrands,

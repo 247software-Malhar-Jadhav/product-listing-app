@@ -29,6 +29,22 @@ export async function fetchProductsByCategory(slug: string): Promise<Product[]> 
   return data.products
 }
 
+/**
+ * Fetch products for several categories at once. The DummyJSON API only filters
+ * by a single category per request, so we fan out one request per selected
+ * category and merge the results, de-duplicating by product id.
+ */
+export async function fetchProductsByCategories(
+  slugs: string[],
+): Promise<Product[]> {
+  const lists = await Promise.all(slugs.map(fetchProductsByCategory))
+  const byId = new Map<number, Product>()
+  for (const list of lists) {
+    for (const product of list) byId.set(product.id, product)
+  }
+  return Array.from(byId.values())
+}
+
 export async function fetchCategories(): Promise<Category[]> {
   const { data } = await api.get<Category[]>('/products/categories')
   return data

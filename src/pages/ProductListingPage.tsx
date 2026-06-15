@@ -15,7 +15,7 @@ export function ProductListingPage() {
   const location = useLocation()
   const {
     filters,
-    setCategory,
+    toggleCategory,
     setPrice,
     setSearch,
     toggleBrand,
@@ -29,7 +29,7 @@ export function ProductListingPage() {
     isFetching,
     isError,
     refetch,
-  } = useProducts(filters.category)
+  } = useProducts(filters.categories)
   const { data: categories = [], isLoading: categoriesLoading } = useCategories()
 
   // Unique brands within the current category scope (case-insensitive, sorted).
@@ -65,7 +65,7 @@ export function ProductListingPage() {
           categoriesLoading={categoriesLoading}
           brands={brands}
           filters={filters}
-          onCategoryChange={setCategory}
+          onCategoryToggle={toggleCategory}
           onPriceChange={setPrice}
           onBrandToggle={toggleBrand}
           onReset={reset}

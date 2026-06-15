@@ -46,7 +46,7 @@ No environment variables are needed — the public DummyJSON API requires no key
 ### Product Listing Page
 - Responsive product grid of cards (image, title, price, star rating).
 - Filters sidebar:
-  - **Category** — fetched dynamically from `/products/categories`; single-select.
+  - **Category** — fetched dynamically from `/products/categories`; multi-select.
   - **Price range** — min/max inputs with an Apply button.
   - **Brand** — multi-select, built from the unique brands in the current scope.
   - **Search** — title search in the header.
@@ -81,11 +81,13 @@ src/
 
 - **Fetch-scope + client-side filtering.** DummyJSON cannot filter by price or brand
   server-side, so a fully server-driven approach would give inconsistent counts when
-  filters combine. Instead the app fetches the full scope in one request — all products
-  (`/products?limit=0`), or all products in a category (`/products/category/{slug}`) —
+  filters combine. Instead the app fetches the full scope — all products
+  (`/products?limit=0`), or, when categories are selected, the union of each selected
+  category (`/products/category/{slug}` per category, merged and de-duplicated by id) —
   and applies price, brand and search filters and pagination on the client. The dataset
   is small (~200 items), so this keeps combined filtering correct and the brand list
-  complete. Category selection still uses the dedicated category endpoint.
+  complete. Categories are **multi-select**: the dedicated category endpoint is still used,
+  fanned out one request per selected category.
 
 - **React Query** handles caching, loading and error states. Categories are treated as
   static (`staleTime: Infinity`); product scopes are cached for 5 minutes and reused when
@@ -100,23 +102,23 @@ src/
 
 | Endpoint                          | Used for                                  |
 | --------------------------------- | ----------------------------------------- |
-| `GET /products?limit=0`           | Full product scope (no category selected) |
-| `GET /products/categories`        | Category filter options                   |
-| `GET /products/category/{slug}`   | Product scope for a selected category     |
-| `GET /products/{id}`              | Product detail page                       |
+| `GET /products?limit=0`           | Full product scope (no category selected)    |
+| `GET /products/categories`        | Category filter options                      |
+| `GET /products/category/{slug}`   | Scope per selected category (fanned out, merged) |
+| `GET /products/{id}`              | Product detail page                          |
 
 ## Assumptions
 
 - Not every product in the dataset has a `brand`; the brand filter only lists brands that
   exist in the current scope and products without a brand are excluded when a brand is selected.
-- Category is single-select because the API exposes one category per endpoint.
+- Categories are multi-select; since the API only filters one category per request, the
+  selected categories are fetched in parallel and merged (de-duplicated by id) client-side.
 - Page size is fixed at 8 (a 4×2 grid on desktop) to match the reference design.
 - Price inputs are committed via **Apply** (matching the design) rather than on every keystroke.
 
 ## Improvements with more time
 
 - Debounced search and a "no results" hint that clears the narrowest filter.
-- URL-synced category multi-select by merging multiple category fetches client-side.
 - Sorting (price, rating, name) and a price range slider.
 - Cart / wishlist functionality behind the header icons.
 - Image gallery on the detail page (the API returns multiple images).

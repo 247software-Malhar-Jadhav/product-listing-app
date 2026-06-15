@@ -1,17 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAllProducts, fetchProductsByCategory } from '@/lib/api'
+import { fetchAllProducts, fetchProductsByCategories } from '@/lib/api'
 import type { Product } from '@/types/product'
 
 /**
- * Fetches the product scope for the listing page. When a category is selected we
- * hit the category endpoint, otherwise we fetch all products. Price / brand
- * filtering and pagination are applied on top of this scope in the page.
+ * Fetches the product scope for the listing page. With one or more categories
+ * selected we fan out to the category endpoint(s) and merge; with none we fetch
+ * all products. Price / brand filtering and pagination are applied on top of
+ * this scope in the page.
  */
-export function useProducts(category: string | null) {
+export function useProducts(categories: string[]) {
+  // Stable, order-independent key so ['a','b'] and ['b','a'] share a cache entry.
+  const key = [...categories].sort()
   return useQuery<Product[]>({
-    queryKey: ['products', category ?? 'all'],
+    queryKey: ['products', key.length ? key.join(',') : 'all'],
     queryFn: () =>
-      category ? fetchProductsByCategory(category) : fetchAllProducts(),
+      key.length ? fetchProductsByCategories(key) : fetchAllProducts(),
     placeholderData: (prev) => prev,
   })
 }
