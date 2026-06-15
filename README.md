@@ -1,73 +1,124 @@
-# React + TypeScript + Vite
+# Product Listing & Detail App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An Amazon-style e-commerce product listing application built with React, TypeScript
+and the public [DummyJSON Products API](https://dummyjson.com/docs/products).
 
-Currently, two official plugins are available:
+It has two screens:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Product Listing Page** (`/`) — filterable, paginated product grid with a filters sidebar.
+- **Product Detail Page** (`/product/:id`) — full details, reviews and a filter-preserving Back button.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Concern        | Choice                                   |
+| -------------- | ---------------------------------------- |
+| Build tool     | Vite                                     |
+| Language       | TypeScript                               |
+| UI             | React 19 (functional components + hooks) |
+| Styling        | Tailwind CSS v4                          |
+| Components     | shadcn/ui (Radix primitives)             |
+| Data fetching  | TanStack React Query + Axios             |
+| Routing        | React Router                             |
+| Icons          | lucide-react                             |
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Requires Node 18+ (developed on Node 24).
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# install dependencies
+npm install
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# start the dev server (http://localhost:5173)
+npm run dev
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# type-check and build for production
+npm run build
+
+# preview the production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+No environment variables are needed — the public DummyJSON API requires no key.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Features
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Product Listing Page
+- Responsive product grid of cards (image, title, price, star rating).
+- Filters sidebar:
+  - **Category** — fetched dynamically from `/products/categories`; single-select.
+  - **Price range** — min/max inputs with an Apply button.
+  - **Brand** — multi-select, built from the unique brands in the current scope.
+  - **Search** — title search in the header.
+- Filters combine, update the list immediately, and **reset pagination to page 1** on change.
+- Numbered pagination with windowed page buttons and Previous/Next.
+- Loading skeletons and an error state with retry.
+
+### Product Detail Page
+- Image, title, price, rating, description, brand, category and reviews.
+- **Back** button returns to the listing with the **previously selected filters still applied**.
+
+## Architecture & Decisions
+
 ```
+src/
+├── components/
+│   ├── common/      # StateMessage (shared error/empty block)
+│   ├── layout/      # Header
+│   ├── products/    # ProductCard, ProductGrid, FiltersSidebar, Pagination, Rating
+│   └── ui/          # shadcn/ui primitives
+├── hooks/           # use-products, use-categories, use-product, use-filter-params
+├── lib/             # api (axios), queryClient, utils
+├── pages/           # ProductListingPage, ProductDetailPage
+└── types/           # Product / Category types
+```
+
+- **Filters live in the URL query string.** A single `useFilterParams` hook reads and
+  writes `category`, `minPrice`, `maxPrice`, `brands`, `q` and `page`. Storing state in
+  the URL is what makes filters survive navigation to the detail page and back, and also
+  makes a filtered view shareable. The detail page additionally receives the listing's
+  query string via router state so its Back button restores the exact view.
+
+- **Fetch-scope + client-side filtering.** DummyJSON cannot filter by price or brand
+  server-side, so a fully server-driven approach would give inconsistent counts when
+  filters combine. Instead the app fetches the full scope in one request — all products
+  (`/products?limit=0`), or all products in a category (`/products/category/{slug}`) —
+  and applies price, brand and search filters and pagination on the client. The dataset
+  is small (~200 items), so this keeps combined filtering correct and the brand list
+  complete. Category selection still uses the dedicated category endpoint.
+
+- **React Query** handles caching, loading and error states. Categories are treated as
+  static (`staleTime: Infinity`); product scopes are cached for 5 minutes and reused when
+  switching back to a previously viewed category. `placeholderData` keeps the old grid in
+  place while a new category loads.
+
+- **shadcn/ui over a heavy component library.** Components are copied into the repo
+  (`components/ui`) rather than pulled from a runtime dependency, keeping the bundle lean
+  while still giving accessible primitives. Styling stays mostly utility-class based.
+
+## API Usage
+
+| Endpoint                          | Used for                                  |
+| --------------------------------- | ----------------------------------------- |
+| `GET /products?limit=0`           | Full product scope (no category selected) |
+| `GET /products/categories`        | Category filter options                   |
+| `GET /products/category/{slug}`   | Product scope for a selected category     |
+| `GET /products/{id}`              | Product detail page                       |
+
+## Assumptions
+
+- Not every product in the dataset has a `brand`; the brand filter only lists brands that
+  exist in the current scope and products without a brand are excluded when a brand is selected.
+- Category is single-select because the API exposes one category per endpoint.
+- Page size is fixed at 8 (a 4×2 grid on desktop) to match the reference design.
+- Price inputs are committed via **Apply** (matching the design) rather than on every keystroke.
+
+## Improvements with more time
+
+- Debounced search and a "no results" hint that clears the narrowest filter.
+- URL-synced category multi-select by merging multiple category fetches client-side.
+- Sorting (price, rating, name) and a price range slider.
+- Cart / wishlist functionality behind the header icons.
+- Image gallery on the detail page (the API returns multiple images).
+- Unit tests for `useFilterParams` and the filtering logic, plus an E2E smoke test.
+- Skeleton-to-content fade and route transitions for polish.
