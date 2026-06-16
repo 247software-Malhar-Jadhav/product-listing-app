@@ -50,7 +50,7 @@ returns to the listing with the previously selected filters still applied.
 | Routing        | React Router                             |
 | Icons          | lucide-react                             |
 
-## Setup
+## Setup Instructions
 
 Requires Node 18+ (developed on Node 24).
 
@@ -87,7 +87,7 @@ No environment variables are needed — the public DummyJSON API requires no key
 - Image, title, price, rating, description, brand, category and reviews.
 - **Back** button returns to the listing with the **previously selected filters still applied**.
 
-## Architecture & Decisions
+## Architectural Decisions
 
 ```
 src/
@@ -103,7 +103,7 @@ src/
 ```
 
 - **Filters live in the URL query string.** A single `useFilterParams` hook reads and
-  writes `category`, `minPrice`, `maxPrice`, `brands`, `q` and `page`. Storing state in
+  writes `categories`, `minPrice`, `maxPrice`, `brands`, `q` and `page`. Storing state in
   the URL is what makes filters survive navigation to the detail page and back, and also
   makes a filtered view shareable. The detail page additionally receives the listing's
   query string via router state so its Back button restores the exact view.
@@ -136,7 +136,7 @@ src/
 | `GET /products/category/{slug}`   | Scope per selected category (fanned out, merged) |
 | `GET /products/{id}`              | Product detail page                          |
 
-## Assumptions
+## Assumptions Made
 
 - Not every product in the dataset has a `brand`; the brand filter only lists brands that
   exist in the current scope and products without a brand are excluded when a brand is selected.
@@ -145,11 +145,48 @@ src/
 - Page size is fixed at 8 (a 4×2 grid on desktop) to match the reference design.
 - Price inputs are committed via **Apply** (matching the design) rather than on every keystroke.
 
-## Improvements with more time
+## Improvements If Given More Time
 
+### Features
 - Debounced search and a "no results" hint that clears the narrowest filter.
 - Sorting (price, rating, name) and a price range slider.
 - Cart / wishlist functionality behind the header icons.
 - Image gallery on the detail page (the API returns multiple images).
-- Unit tests for `useFilterParams` and the filtering logic, plus an E2E smoke test.
 - Skeleton-to-content fade and route transitions for polish.
+
+### Testing
+- Unit tests for `useFilterParams` (URL serialization) and the filtering logic.
+- Component tests for the grid/filters and an E2E smoke test (Playwright) covering
+  filter → navigate to detail → Back-restores-filters.
+
+### Performance optimizations
+
+What's already in place:
+- **React Query caching** — `staleTime` (5 min for products, `Infinity` for categories)
+  avoids refetching data that hasn't changed; revisiting a category or going Back to the
+  listing serves instantly from cache instead of hitting the network.
+- **`placeholderData`** keeps the previous grid visible while a new category loads, so the
+  UI never flashes empty (avoids layout shift / CLS).
+- **Memoized derivations** — brand extraction and the filter/pagination pipeline run inside
+  `useMemo`, so typing in an unrelated input doesn't recompute the filtered list.
+- **Client-side pagination** renders only 8 cards at a time rather than all ~200.
+- **Lazy-loaded images** (`loading="lazy"`) defer off-screen product thumbnails.
+
+What I'd add with more time:
+- **Route-based code splitting** — `React.lazy` + `Suspense` for the detail page so its
+  reviews/markup aren't in the initial bundle, shrinking first-load JS.
+- **Virtualized grid** (`@tanstack/react-virtual`) if the page size grew large, to keep the
+  DOM node count flat regardless of result count.
+- **Server-driven pagination** — for a real backend that supports filtering, switch to
+  `limit`/`skip` (or cursor) queries with React Query's `keepPreviousData`/infinite queries,
+  so the client never holds the full dataset in memory.
+- **Debounced + cancellable search** (`AbortController` via Axios) to cut wasted work and
+  in-flight requests while typing.
+- **Image optimization** — responsive `srcset`/`sizes`, explicit width/height to reserve
+  space (zero CLS), and `fetchpriority="high"` on the detail hero image; blur-up placeholders.
+- **Prefetch on hover** — `queryClient.prefetchQuery` for a product when its card is hovered,
+  so the detail page is warm before the click.
+- **Bundle trimming** — analyze with `rollup-plugin-visualizer`, tree-shake unused shadcn/Radix
+  pieces, and self-host fonts to remove render-blocking requests.
+- **Caching headers / CDN** — long-lived cache for hashed assets and an HTTP cache layer in
+  front of the API; a service worker for offline-first repeat visits.
